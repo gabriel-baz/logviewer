@@ -1,13 +1,19 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 import os
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from models.database import Database
 from parsers.apache_parser import ApacheParser
 from parsers.ftp_parser import FTPParser
 from utils.report_analyzer import ReportAnalyzer
+from utils.reportes_2 import ReportAnalyzer2
 from utils.alerts_handler import get_alerts
 import config
 import re
+
+import pandas as pd
+import io
+import base64
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -430,6 +436,265 @@ def alerts():
         table_name=table_name, 
         error_logs=error_logs
     )
+
+
+
+#otro reportes 
+## inicio CBRV 
+@app.route('/reportes', methods=['GET'])
+def reportes():
+
+    db_config = config.DB_CONFIG
+    report_analyzer2 = ReportAnalyzer2(db_config)
+    resultados = report_analyzer2.get_todo("", 'todo', '', '')  # Carga inicial
+
+    return render_template("reportes/reportes.html", resultados=resultados)
+
+
+@app.route('/filtros_registro/<tipo_log>', methods=['POST'])
+def filtros_registro(tipo_log):
+    db_config = config.DB_CONFIG
+    report_analyzer2 = ReportAnalyzer2(db_config)
+
+    texto = request.form.get("texto", "").lower().strip()
+    modo = request.form.get("modo")
+    desde = request.form.get("desde")
+    hasta = request.form.get("hasta")
+
+    resultados = report_analyzer2.get_todo(texto, modo, desde, hasta)
+    #vsftpd
+    #xfer
+    #apache
+    #apache_error
+    if tipo_log == "vsftpd":
+        return render_template("partials/reportes_ftp.html", resultados=resultados['ftp'])
+    elif tipo_log == "xfer":
+        return render_template("partials/reportes_xfer.html", resultados=resultados['xfer'])
+    elif tipo_log == "apache":
+        return render_template("partials/reportes_apache.html", resultados=resultados['apache'])
+    elif tipo_log == "apache_error":
+        return render_template("partials/reportes_apache_error.html", resultados=resultados['apache_error'])
+    else:
+        return "", 400
+
+
+
+@app.route('/alertas', methods=['GET'])
+def alertas():
+    db_config = config.DB_CONFIG
+    alertas = AlertasClass(db_config)
+    resultados = alertas.get_todo("", 'todo', '', '')  # Carga inicial
+
+    return render_template("reportes/alertas.html", resultados=resultados)
+
+@app.route('/filtros_alertas/<tipo_log>', methods=['POST'])
+def filtros_alertas(tipo_log):
+    db_config = config.DB_CONFIG
+    alertas = AlertasClass(db_config)
+
+    texto = request.form.get("texto", "").lower().strip()
+    modo = request.form.get("modo")
+    desde = request.form.get("desde")
+    hasta = request.form.get("hasta")
+
+    resultados = alertas.get_todo(texto, modo, desde, hasta)
+
+    if tipo_log == "vsftpd":
+        return render_template("partials/alertas_ftp.html", filas=resultados['ftp']['tabla'])
+    elif tipo_log == "error_apache":
+        return render_template("partials/alertas_apache.html", filas=resultados['apache']['tabla'])
+    else:
+        return "", 400
+
+
+
+@app.route('/exportar_excel', methods=['POST'])
+def exportar_excel():
+
+    
+    filtros = request.json  
+
+
+    db_config = config.DB_CONFIG
+    report_analyzer2 = ReportAnalyzer2(db_config)
+
+    texto = filtros['texto']
+    modo = filtros['modo']
+    desde = filtros['desde']
+    hasta = filtros['hasta']
+    tipo = filtros['tipo']
+    data = {'datos':[], 'imagenes':[]}
+    if tipo == 'vsftpd':
+        demas = report_analyzer2.get_demas_graficos_ftp(texto, modo, desde, hasta)
+        data['datos'] = report_analyzer2.get_ftp_filtrado(texto, modo, desde, hasta)
+        data['imagenes'] = [
+            {'nombre':'Conteo de entradas',
+             'imagen': report_analyzer2.get_ftp_filtrado_grafico(texto, modo, desde, hasta)},
+             {'nombre':'Tipos de Acciones',
+             'imagen': demas['action_chart']},
+             {'nombre':'Inicios de sesion',
+             'imagen': demas['login_stats_chart']},
+             {'nombre':'Los usuarios mas activos',
+             'imagen': demas['active_users_chart']},
+             {'nombre':'Las IPs mas activas',
+             'imagen': demas['active_ips_chart']},
+             {'nombre':'Los archivos mas accedidos',
+             'imagen': demas['accessed_files_chart']},
+        ]
+
+    elif tipo == 'xfer':
+        demas = report_analyzer2.get_demas_graficos_xfer(texto, modo, desde, hasta)
+        data['datos'] = report_analyzer2.get_xfer_filtrado(texto, modo, desde, hasta)
+        data['imagenes'] = [
+            {'nombre':'Conteo de entradas',
+             'imagen': report_analyzer2.get_xfer_filtrado_grafico(texto, modo, desde, hasta)},
+             {'nombre':'Direcciones',
+             'imagen': demas['direction_chart']},
+             {'nombre':'Servicios',
+             'imagen': demas['services_chart']},
+             {'nombre':'Metodos de autentificacion',
+             'imagen': demas['auth_methods_chart']},
+             {'nombre':'Los Usuarios mas activos',
+             'imagen': demas['active_users_chart']},
+             {'nombre':'Las IPs mas activas',
+             'imagen': demas['active_ips_chart']},
+             {'nombre':'Tamaño de los Archivo',
+             'imagen': demas['size_chart']},
+             {'nombre':'Promedios de duracion',
+             'imagen': demas['avg_duration_chart']},
+        ]
+
+    elif tipo == 'apache':
+        data['datos'] = report_analyzer2.get_apache_filtrado(texto, modo, desde, hasta)
+
+        demas = report_analyzer2.get_demas_graficos_apache(texto, modo, desde, hasta)
+
+        data['imagenes'] = [
+            {'nombre':'Conteo de entradas',
+             'imagen': report_analyzer2.get_apache_filtrado_grafico(texto, modo, desde, hasta)},
+             {'nombre':'Las 10 Rutas más Populares',
+             'imagen': demas['populares_chart']},
+             {'nombre':'Métodos HTTP Usados',
+             'imagen': demas['http_methods_chart']},
+             {'nombre':'Respuestas HTTP Enviadas',
+             'imagen': demas['status_codes_chart']},
+             {'nombre':'URLs de Referencia',
+             'imagen': demas['top_referrers_chart']},
+             {'nombre':'Usuarios Utilizados',
+             'imagen': demas['top_user_agents_chart']},
+             {'nombre':'Tamaño de Bytes Enviados',
+             'imagen': demas['response_sizes_chart']},
+             {'nombre':'Las 10 IPs más Activas',
+             'imagen': demas['top_ips_chart']},
+             {'nombre':'Tiempo de Respuesta (mín, promedio, máx)',
+             'imagen': demas['response_time_stats_chart']},
+        ]
+    elif tipo == 'apache_error':
+        demas = report_analyzer2.get_demas_graficos_apache_error(texto, modo, desde, hasta)
+
+        data['datos'] = report_analyzer2.get_apache_error_filtrado(texto, modo, desde, hasta)
+        data['imagenes'] = [
+            {'nombre':'Conteo de entradas',
+             'imagen': report_analyzer2.get_apache_error_filtrado_grafico(texto, modo, desde, hasta)},
+             {'nombre':'Severidad de los errores',
+             'imagen': demas['error_level_chart']},
+             {'nombre':'Mensajes de error Comunes',
+             'imagen': demas['common_errors_chart']},
+             {'nombre':'Los Archivos con mas Errores',
+             'imagen': demas['error_files_chart']},
+             {'nombre':'Los Clientes que causaron mas Errores',
+             'imagen': demas['error_clients_chart']},
+        ]
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+
+    # Convertir a DataFrame sin la imagen
+    df = []
+    if tipo == "vsftpd":
+        
+        df = pd.DataFrame([{
+        "Fecha y hora": row["fecha_hora"],
+        "Usuario": row["usuario"],
+        "IP": row["ip"],
+        "Acción": row["accion"],
+        "Archivo": row["archivo"],
+        "Detalles": row["detalles"]
+        } for row in data['datos']])
+    elif tipo == "xfer":
+        df = pd.DataFrame([{
+        "Fecha y hora": row["fecha_hora"],
+        "Tiempo de Transferencia": row["duracion"],
+        "Host remoto": row["servidor"],
+        "Tamaño del archivo": row["tamaño_archivo"],
+        "Nombre del archivo": row["archivo"],
+        "Tipo de transferencia": row["tipo_transferencia"],
+        "Acción especial": row["accion_especial"],
+        "Direccion": row["direccion"],
+        "Usuario": row["usuario"],
+        "Servicio": row["servicio"],
+        "Método de autenticación": row["metodo_autenticacion"],
+        "Usuario autenticado": row["usuario_id"]
+        } for row in data['datos']])
+    elif tipo == "apache":
+        df = pd.DataFrame([{
+        "IP": row["ip"],
+        "Fecha y hora": row["fecha_hora"],
+        "Metodo": row["metodo"],
+        "Ruta": row["ruta"],
+        "Protocolo": row["protocolo"],
+        "Bytes enviados": row["bytes_enviados"],
+        "Referencia": row["referer"],
+        "Cliente": row["user_agent"],
+        "Tiempo de Respuesta": row["tiempo_respuesta"],
+        } for row in data['datos']])
+    elif tipo == "apache_error":
+        df = pd.DataFrame([{
+        "Fecha y hora": row["fecha_hora"],
+        "Severidad": row["nivel_error"],
+        "Cliente": row["cliente"],
+        "Mensaje": row["mensaje"],
+        "archivo": row["archivo"],
+        "Linea de Codigo": row["linea"],
+        } for row in data['datos']])
+    else:
+        return "", 400
+    
+    df.to_excel(writer, index=False, sheet_name='Datos')
+    workbook = writer.book
+    sheet = workbook.add_worksheet('Imagenes')
+    writer.sheets['Imagenes'] = sheet
+
+    col_count = 2
+    row_spacing = 25 
+
+    for i, row in enumerate(data['imagenes']):
+        if not row.get('imagen'):  # Evita None o string vacío
+            continue  # Saltar si no hay imagen
+        fila_titulo = i * row_spacing
+        fila_imagen = fila_titulo + 1
+
+        # Título en columna 0
+        sheet.write(fila_titulo, 0, row['nombre'])
+
+        # Imagen
+        imagen_b64 = row['imagen'].split(',')[1] if ',' in row['imagen'] else row['imagen']
+        img_data = base64.b64decode(imagen_b64)
+        img_io = io.BytesIO(img_data)
+
+        sheet.insert_image(fila_imagen, 0, f"imagen_{i}.png", {
+            'image_data': img_io,
+            'x_scale': 0.5,
+            'y_scale': 0.5
+        })
+
+    writer.close()
+    output.seek(0)
+
+    nombre_archivo = f"reporte_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return send_file(output, download_name=nombre_archivo, as_attachment=True)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
