@@ -33,25 +33,37 @@
         white-space: nowrap;
     }
 </style>
+
 {% endblock %}
 
 {% block content %}
 
-<div class="d-flex justify-content-between mb-3">
-    
-    <button id="copySelectedBtn" class="btn btn-primary copy-button" disabled>Copiar selección</button>
-</div>
 
-<div class="collapse navbar-collapse" id="navbarNav">
-    <ul class="navbar-nav">
-        <li class="nav-item">
-            <a class="nav-link {% if request.path == url_for('reports') %}active{% endif %}" href="{{ url_for('reports') }}">Reportes</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if request.path == url_for('alerts') %}active{% endif %}" href="{{ url_for('alerts') }}">Alertas</a>
-        </li>
-    </ul>
-</div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" id="navbar">
+        <div class="container">
+                <span class="navbar-brand titulo">Analizador de Logs - FTP & Apache</span>            
+        
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="nav">
+
+                    <a class="nav-link" href="{{ url_for('alerts') }}">Alertas</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('reports') }}">Reportes</a>
+                </li>
+                
+            </ul>
+        </div>
+        
+        <form action="{{ url_for('clear_database_route') }}" method="POST">
+        <button type="submit" class="btn btn-danger salir">Salir</button>
+        </form>
+    </nav>
 
 <div class="card mb-4">
   <div class="card-header">
@@ -113,6 +125,11 @@
   </div>
 </div>
 
+<div class="d-flex justify-content-between mb-3">
+    
+    <button id="copySelectedBtn" class="btn btn-primary copy-button" disabled>Copiar selección</button>
+</div>
+
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
@@ -134,8 +151,8 @@
                                     <th class="checkbox-column">
                                         <input type="checkbox" id="selectAll" class="form-check-input">
                                     </th>
-                                    <th>IP</th>
                                     <th>Fecha/Hora</th>
+                                    <th>IP</th>
                                     <th>Método</th>
                                     <th>Ruta</th>
                                     <th>Estado</th>
@@ -153,8 +170,8 @@
                                     <td class="checkbox-column">
                                         <input type="checkbox" class="form-check-input row-checkbox">
                                     </td>
-                                    <td>{{ log.ip }}</td>
                                     <td>{{ log.fecha_hora }}</td>
+                                    <td>{{ log.ip }}</td>
                                     <td>{{ log.metodo }}</td>
                                     <td title="{{ log.ruta }}">{{ log.ruta|truncate(30) }}</td>
                                     <td>{{ log.codigo_estado }}</td>
@@ -287,272 +304,319 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const selectAllCheckbox = document.getElementById('selectAll');
-        const copySelectedBtn = document.getElementById('copySelectedBtn');
-        const logTable = document.getElementById('logTable');
-        const searchButton = document.getElementById('searchButton');
-        const resetButton = document.getElementById('resetButton');
-        const searchTerm = document.getElementById('searchTerm');
-        const advancedSearchCheckbox = document.getElementById('advancedSearch');
-        const advancedOptions = document.getElementById('advancedOptions');
-        const startDateInput = document.getElementById('startDate');
-        const endDateInput = document.getElementById('endDate');
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const copySelectedBtn = document.getElementById('copySelectedBtn');
+    const logTable = document.getElementById('logTable');
+    const searchButton = document.getElementById('searchButton');
+    const resetButton = document.getElementById('resetButton');
+    const searchTerm = document.getElementById('searchTerm');
+    const advancedSearchCheckbox = document.getElementById('advancedSearch');
+    const advancedOptions = document.getElementById('advancedOptions');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    // Función para establecer la fecha máxima (actual)
+    function setMaxDateToday() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0'); // Meses son 0-indexados
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
         
-        // Función para establecer la fecha máxima (actual)
-        function setMaxDateToday() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0'); // Meses son 0-indexados
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
+        // Formato requerido para datetime-local: YYYY-MM-DDThh:mm
+        const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        // Configurar fecha máxima para ambos inputs
+        startDateInput.max = formattedDateTime;
+        endDateInput.max = formattedDateTime;
+    }
+    
+    // Validar que la fecha de inicio no sea mayor que la fecha de fin
+    function validateDateRange() {
+        if (startDateInput.value && endDateInput.value) {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
             
-            // Formato requerido para datetime-local: YYYY-MM-DDThh:mm
-            const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            if (startDate > endDate) {
+                alert('La fecha de inicio no puede ser mayor que la fecha de fin');
+                // Limpiar ambos campos para evitar confusión
+                startDateInput.value = '';
+                endDateInput.value = '';
+            }
+        }
+    }
+    
+    // Validar que no se seleccionen fechas futuras
+    function validateFutureDate(inputElement) {
+        if (inputElement.value) {
+            const selectedDate = new Date(inputElement.value);
+            const currentDate = new Date();
             
-            // Configurar fecha máxima para ambos inputs
-            startDateInput.max = formattedDateTime;
-            endDateInput.max = formattedDateTime;
-        }
-        
-        // Validar que la fecha de inicio no sea mayor que la fecha de fin
-        function validateDateRange() {
-            if (startDateInput.value && endDateInput.value) {
-                const startDate = new Date(startDateInput.value);
-                const endDate = new Date(endDateInput.value);
-                
-                if (startDate > endDate) {
-                    alert('La fecha de inicio no puede ser mayor que la fecha de fin');
-                    // Limpiar ambos campos para evitar confusión
-                    startDateInput.value = '';
-                    endDateInput.value = '';
-                }
+            if (selectedDate > currentDate) {
+                alert('No se puede seleccionar una fecha y hora futura');
+                inputElement.value = ''; // Limpiar el campo con fecha futura
             }
         }
+    }
+    
+    // Configurar eventos para validaciones
+    setMaxDateToday();
+    startDateInput.addEventListener('change', function() {
+        validateFutureDate(startDateInput);
+        validateDateRange();
+    });
+    endDateInput.addEventListener('change', function() {
+        validateFutureDate(endDateInput);
+        validateDateRange();
+    });
+    
+    advancedSearchCheckbox.addEventListener('change', function() {
+        advancedOptions.style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Reset functionality
+    resetButton.addEventListener('click', function() {
+        // Show all rows
+        const rows = logTable.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            row.classList.remove('hidden');
+            // Remove highlights
+            row.innerHTML = row.innerHTML.replace(/<mark>/g, '').replace(/<\/mark>/g, '');
+        });
+    });
+
+    // Search functionality
+ // Código completo corregido para la función de búsqueda
+// Search functionality
+searchButton.addEventListener('click', function() {
+    // Reset previous search
+    const rows = logTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.classList.remove('hidden');
+        row.innerHTML = row.innerHTML.replace(/<mark>/g, '').replace(/<\/mark>/g, '');
+    });
+
+    // Get search parameters
+    const basicSearchTerm = searchTerm.value.toLowerCase().trim();
+    const isAdvancedSearch = advancedSearchCheckbox.checked;
+
+    // Advanced search parameters
+    const startDate = isAdvancedSearch ? startDateInput.value : null;
+    const endDate = isAdvancedSearch ? endDateInput.value : null;
+    const term1 = isAdvancedSearch ? document.getElementById('term1').value.toLowerCase().trim() : null;
+    const term2 = isAdvancedSearch ? document.getElementById('term2').value.toLowerCase().trim() : null;
+    const logicOperator = isAdvancedSearch ? document.getElementById('logicOperator').value : null;
+
+    // Function to highlight search term in text
+    function highlightText(text, term) {
+        if (!term) return text;
+        const regex = new RegExp(`(${term})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    // Iterate through rows and apply filtering
+    rows.forEach(row => {
+        let shouldShow = true;
+        const cells = row.querySelectorAll('td:not(.checkbox-column)');
+        const cellTexts = Array.from(cells).map(cell => cell.textContent.toLowerCase());
         
-        // Validar que no se seleccionen fechas futuras
-        function validateFutureDate(inputElement) {
-            if (inputElement.value) {
-                const selectedDate = new Date(inputElement.value);
-                const currentDate = new Date();
-                
-                if (selectedDate > currentDate) {
-                    alert('No se puede seleccionar una fecha y hora futura');
-                    inputElement.value = ''; // Limpiar el campo con fecha futura
-                }
-            }
+        // Basic search
+        if (basicSearchTerm) {
+            const basicMatch = cellTexts.some(text => text.includes(basicSearchTerm));
+            shouldShow = shouldShow && basicMatch;
         }
-        
-        // Configurar eventos para validaciones
-        setMaxDateToday();
-        startDateInput.addEventListener('change', function() {
-            validateFutureDate(startDateInput);
-            validateDateRange();
-        });
-        endDateInput.addEventListener('change', function() {
-            validateFutureDate(endDateInput);
-            validateDateRange();
-        });
-        
-        advancedSearchCheckbox.addEventListener('change', function() {
-            advancedOptions.style.display = this.checked ? 'block' : 'none';
-        });
 
-        // Reset functionality
-        resetButton.addEventListener('click', function() {
-            // Show all rows
-            const rows = logTable.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                row.classList.remove('hidden');
-                // Remove highlights
-                row.innerHTML = row.innerHTML.replace(/<mark>/g, '').replace(/<\/mark>/g, '');
-            });
-        });
-
-        // Search functionality
-        searchButton.addEventListener('click', function() {
-            // Reset previous search
-            const rows = logTable.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                row.classList.remove('hidden');
-                row.innerHTML = row.innerHTML.replace(/<mark>/g, '').replace(/<\/mark>/g, '');
-            });
-
-            // Get search parameters
-            const basicSearchTerm = searchTerm.value.toLowerCase().trim();
-            const isAdvancedSearch = advancedSearchCheckbox.checked;
-
-            // Advanced search parameters
-            const startDate = isAdvancedSearch ? document.getElementById('startDate').value : null;
-            const endDate = isAdvancedSearch ? document.getElementById('endDate').value : null;
-            const term1 = isAdvancedSearch ? document.getElementById('term1').value.toLowerCase().trim() : null;
-            const term2 = isAdvancedSearch ? document.getElementById('term2').value.toLowerCase().trim() : null;
-            const logicOperator = isAdvancedSearch ? document.getElementById('logicOperator').value : null;
-
-            // Function to highlight search term in text
-            function highlightText(text, term) {
-                if (!term) return text;
-                const regex = new RegExp(`(${term})`, 'gi');
-                return text.replace(regex, '<mark>$1</mark>');
-            }
-
-            // Iterate through rows and apply filtering
-            rows.forEach(row => {
-                let shouldShow = true;
-                const cells = row.querySelectorAll('td:not(.checkbox-column)');
-                const cellTexts = Array.from(cells).map(cell => cell.textContent.toLowerCase());
-                
-                // Basic search
-                if (basicSearchTerm) {
-                    const basicMatch = cellTexts.some(text => text.includes(basicSearchTerm));
-                    shouldShow = shouldShow && basicMatch;
-                }
-
-                // Advanced search options
-                if (isAdvancedSearch) {
-                    // Date range filtering
-                    if (startDate || endDate) {
-                        const rowDateCell = row.querySelector('td:nth-child(2)'); // Assuming date is in 2nd column
-                        const rowDate = new Date(rowDateCell.textContent);
-                        const startDateTime = startDate ? new Date(startDate) : null;
-                        const endDateTime = endDate ? new Date(endDate) : null;
-
-                        if (startDateTime && rowDate < startDateTime) shouldShow = false;
-                        if (endDateTime && rowDate > endDateTime) shouldShow = false;
-                    }
-
-                    // Logical operators search with term matching
-                    if ((term1 || term2) && logicOperator) {
-                        const term1Match = term1 ? cellTexts.some(text => text.includes(term1)) : true;
-                        const term2Match = term2 ? cellTexts.some(text => text.includes(term2)) : true;
-
-                        if (logicOperator === 'AND') {
-                            // If both terms provided, both must match
-                            if (term1 && term2) {
-                                shouldShow = shouldShow && term1Match && term2Match;
-                            } 
-                            // If only one term, that term must match
-                            else if (term1) {
-                                shouldShow = shouldShow && term1Match;
-                            } 
-                            else if (term2) {
-                                shouldShow = shouldShow && term2Match;
-                            }
-                        } else if (logicOperator === 'OR') {
-                            // If both terms provided, at least one must match
-                            if (term1 && term2) {
-                                shouldShow = shouldShow && (term1Match || term2Match);
-                            } 
-                            // If only one term, that term must match
-                            else if (term1) {
-                                shouldShow = shouldShow && term1Match;
-                            } 
-                            else if (term2) {
-                                shouldShow = shouldShow && term2Match;
-                            }
+        // Advanced search options
+        if (isAdvancedSearch) {
+            // Guardar el estado original antes de aplicar filtros avanzados
+            // Solo para cuando la búsqueda básica está vacía
+            const originalShouldShow = shouldShow;
+            let advancedFilterApplied = false;
+            
+            // Date range filtering
+            if (startDate || endDate) {
+                advancedFilterApplied = true;
+                // Obtener la celda con la fecha (primera columna después del checkbox)
+                const dateCell = row.querySelector('td:nth-child(2)');
+                if (dateCell) {
+                    // Convertir el texto de fecha a un objeto Date
+                    const dateText = dateCell.textContent.trim();
+                    // Intentar parsearlo como fecha
+                    const rowDate = new Date(dateText);
+                    
+                    // Solo aplicar filtros si la fecha es válida
+                    if (!isNaN(rowDate.getTime())) {
+                        // Aplicar filtro de fecha inicial
+                        if (startDate && new Date(startDate) > rowDate) {
+                            shouldShow = false;
+                        }
+                        
+                        // Aplicar filtro de fecha final
+                        if (endDate && new Date(endDate) < rowDate) {
+                            shouldShow = false;
                         }
                     }
                 }
-
-                // Apply filtering
-                if (shouldShow) {
-                    row.classList.remove('hidden');
-                    
-                    // Highlight basic search term
-                    if (basicSearchTerm) {
-                        cells.forEach(cell => {
-                            cell.innerHTML = highlightText(cell.textContent, basicSearchTerm);
-                        });
-                    }
-                } else {
-                    row.classList.add('hidden');
-                }
-            });
-            
-            // Re-inicializar la funcionalidad de checkboxes después de la búsqueda
-            initCheckboxFunctionality();
-        });
-
-        // Usar delegación de eventos para los checkboxes
-        function updateCopyButtonState() {
-            const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
-            const anyChecked = Array.from(visibleRowCheckboxes).some(checkbox => checkbox.checked);
-            copySelectedBtn.disabled = !anyChecked;
-        }
-        
-        // Inicializar y actualizar el estado de los checkboxes y botón de copia
-        function initCheckboxFunctionality() {
-            // Inicializar el botón de copiar
-            updateCopyButtonState();
-            
-            // Asegurarse de que el evento para "Seleccionar todo" esté configurado
-            if (selectAllCheckbox) {
-                // Remover evento anterior si existe para evitar duplicados
-                selectAllCheckbox.removeEventListener('change', selectAllHandler);
-                // Añadir el evento
-                selectAllCheckbox.addEventListener('change', selectAllHandler);
             }
-        }
-        
-        // Manejador para el checkbox "Seleccionar todo"
-        function selectAllHandler() {
-            const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
-            visibleRowCheckboxes.forEach(checkbox => {
-                checkbox.checked = selectAllCheckbox.checked;
-            });
-            updateCopyButtonState();
-        }
-        
-        // Usar delegación de eventos para los checkboxes de filas (evitar desconexión tras búsqueda)
-        document.addEventListener('change', function(event) {
-            if (event.target.classList.contains('row-checkbox')) {
-                const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
-                const allChecked = Array.from(visibleRowCheckboxes).every(cb => cb.checked);
-                const someChecked = Array.from(visibleRowCheckboxes).some(cb => cb.checked);
+
+            // Logical operators (AND/OR) with term matching
+            if (term1 || term2) {
+                advancedFilterApplied = true;
+                let term1Match = false;
+                let term2Match = false;
                 
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.checked = allChecked;
-                    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                // Comprobar si alguna celda contiene term1
+                if (term1) {
+                    term1Match = cellTexts.some(text => text.includes(term1));
                 }
-                updateCopyButtonState();
+                
+                // Comprobar si alguna celda contiene term2
+                if (term2) {
+                    term2Match = cellTexts.some(text => text.includes(term2));
+                }
+                
+                // Aplicar lógica según el operador seleccionado
+                if (logicOperator === 'AND') {
+                    // Para AND, ambos términos deben estar presentes si se proporcionaron
+                    if (term1 && term2) {
+                        shouldShow = shouldShow && term1Match && term2Match;
+                    } else if (term1) {
+                        shouldShow = shouldShow && term1Match;
+                    } else if (term2) {
+                        shouldShow = shouldShow && term2Match;
+                    }
+                } else if (logicOperator === 'OR') {
+                    // Para OR, al menos un término debe estar presente si se proporcionaron
+                    if (term1 && term2) {
+                        shouldShow = shouldShow && (term1Match || term2Match);
+                    } else if (term1) {
+                        shouldShow = shouldShow && term1Match;
+                    } else if (term2) {
+                        shouldShow = shouldShow && term2Match;
+                    }
+                }
+            }
+            
+            // Si no hay filtros básicos y ningún filtro avanzado se aplicó, mostrar todas las filas
+            if (!basicSearchTerm && !advancedFilterApplied) {
+                shouldShow = true;
+            }
+        }
+
+        // Apply filtering
+        if (shouldShow) {
+            row.classList.remove('hidden');
+            
+            // Highlight basic search term
+            if (basicSearchTerm) {
+                cells.forEach(cell => {
+                    cell.innerHTML = highlightText(cell.textContent, basicSearchTerm);
+                });
+            }
+            
+            // Highlight advanced search terms
+            if (isAdvancedSearch) {
+                if (term1) {
+                    cells.forEach(cell => {
+                        cell.innerHTML = highlightText(cell.innerHTML, term1);
+                    });
+                }
+                if (term2) {
+                    cells.forEach(cell => {
+                        cell.innerHTML = highlightText(cell.innerHTML, term2);
+                    });
+                }
+            }
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+    
+    // Re-inicializar la funcionalidad de checkboxes después de la búsqueda
+    initCheckboxFunctionality();
+});
+
+    // Usar delegación de eventos para los checkboxes
+    function updateCopyButtonState() {
+        const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
+        const anyChecked = Array.from(visibleRowCheckboxes).some(checkbox => checkbox.checked);
+        copySelectedBtn.disabled = !anyChecked;
+    }
+    
+    // Inicializar y actualizar el estado de los checkboxes y botón de copia
+    function initCheckboxFunctionality() {
+        // Inicializar el botón de copiar
+        updateCopyButtonState();
+        
+        // Asegurarse de que el evento para "Seleccionar todo" esté configurado
+        if (selectAllCheckbox) {
+            // Remover evento anterior si existe para evitar duplicados
+            selectAllCheckbox.removeEventListener('change', selectAllHandler);
+            // Añadir el evento
+            selectAllCheckbox.addEventListener('change', selectAllHandler);
+        }
+    }
+    
+    // Manejador para el checkbox "Seleccionar todo"
+    function selectAllHandler() {
+        const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
+        visibleRowCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+        updateCopyButtonState();
+    }
+    
+    // Usar delegación de eventos para los checkboxes de filas (evitar desconexión tras búsqueda)
+    document.addEventListener('change', function(event) {
+        if (event.target.classList.contains('row-checkbox')) {
+            const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
+            const allChecked = Array.from(visibleRowCheckboxes).every(cb => cb.checked);
+            const someChecked = Array.from(visibleRowCheckboxes).some(cb => cb.checked);
+            
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+            updateCopyButtonState();
+        }
+    });
+
+    // Función para copiar las filas seleccionadas
+    copySelectedBtn.addEventListener('click', function() {
+        const selectedRows = [];
+        const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
+        
+        visibleRowCheckboxes.forEach((checkbox) => {
+            if (checkbox.checked) {
+                const row = checkbox.closest('tr');
+                const rowData = [];
+                
+                // Obtener todos los datos de la fila (excluyendo la celda del checkbox)
+                row.querySelectorAll('td:not(.checkbox-column)').forEach(cell => {
+                    rowData.push(cell.textContent.trim());
+                });
+                
+                selectedRows.push(rowData.join('\t'));
             }
         });
-
-        // Función para copiar las filas seleccionadas
-        copySelectedBtn.addEventListener('click', function() {
-            const selectedRows = [];
-            const visibleRowCheckboxes = document.querySelectorAll('tbody tr:not(.hidden) .row-checkbox');
-            
-            visibleRowCheckboxes.forEach((checkbox) => {
-                if (checkbox.checked) {
-                    const row = checkbox.closest('tr');
-                    const rowData = [];
-                    
-                    // Obtener todos los datos de la fila (excluyendo la celda del checkbox)
-                    row.querySelectorAll('td:not(.checkbox-column)').forEach(cell => {
-                        rowData.push(cell.textContent.trim());
-                    });
-                    
-                    selectedRows.push(rowData.join('\t'));
-                }
+        
+        // Copiar al portapapeles
+        const textToCopy = selectedRows.join('\n');
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                alert('Filas seleccionadas copiadas al portapapeles');
+            })
+            .catch(err => {
+                console.error('Error al copiar: ', err);
+                alert('Error al copiar. Intente nuevamente.');
             });
-            
-            // Copiar al portapapeles
-            const textToCopy = selectedRows.join('\n');
-            navigator.clipboard.writeText(textToCopy)
-                .then(() => {
-                    alert('Filas seleccionadas copiadas al portapapeles');
-                })
-                .catch(err => {
-                    console.error('Error al copiar: ', err);
-                    alert('Error al copiar. Intente nuevamente.');
-                });
-        });
-
-        // Inicializar la funcionalidad al cargar la página
-        initCheckboxFunctionality();
     });
+
+    // Inicializar la funcionalidad al cargar la página
+    initCheckboxFunctionality();
+});
 </script>
 
 {% endblock %}

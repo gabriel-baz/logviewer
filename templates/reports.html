@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Log Analysis Reports{% endblock %}
+{% block title %}Informes de Análisis de Logs{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -8,30 +8,30 @@
 
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
-            <h4>Log Analysis Report</h4>
+            <h4>Informe de Análisis de Logs</h4>
         </div>
         <div class="card-body">
             {% if active_table %}
                 <div class="alert alert-info">
-                    <strong>Active Data Source:</strong> {{ active_table }} ({{ record_count }} records)
+                    <strong>Fuente de Datos Activa:</strong> {{ active_table }} ({{ record_count }} registros)
                 </div>
                 
                 {% if report_data.type == "apache_access" %}
-                    <!-- Apache Access Log Report -->
-                    <h3 class="mt-4 mb-3">Apache Access Log Analysis</h3>
+                    <!-- Informe de Logs de Acceso de Apache -->
+                    <h3 class="mt-4 mb-3">Análisis de Logs de Acceso de Apache</h3>
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>General Statistics</h5>
+                                    <h5>Estadísticas Generales</h5>
                                 </div>
                                 <div class="card-body">
-                                    <p><strong>Total Requests:</strong> {{ report_data.total_requests }}</p>
-                                    <p><strong>Response Time:</strong> 
-                                        Avg: {{ "%.3f"|format(report_data.response_time_stats.avg_time) }}s, 
-                                        Min: {{ "%.3f"|format(report_data.response_time_stats.min_time) }}s, 
-                                        Max: {{ "%.3f"|format(report_data.response_time_stats.max_time) }}s
+                                    <p><strong>Total de Solicitudes:</strong> {{ report_data.total_requests }}</p>
+                                    <p><strong>Tiempo de Respuesta:</strong> 
+                                        Promedio: {{ "%.3f"|format(report_data.response_time_stats.avg_time) }}s, 
+                                        Mínimo: {{ "%.3f"|format(report_data.response_time_stats.min_time) }}s, 
+                                        Máximo: {{ "%.3f"|format(report_data.response_time_stats.max_time) }}s
                                     </p>
                                 </div>
                             </div>
@@ -40,10 +40,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>HTTP Methods Distribution</h5>
+                                    <h5>Distribución de Métodos HTTP</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.http_methods_chart }}" class="img-fluid" alt="HTTP Methods Chart">
+                                    <img src="{{ report_data.http_methods_chart }}" class="img-fluid" alt="Gráfico de Métodos HTTP">
                                 </div>
                             </div>
                         </div>
@@ -53,10 +53,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Response Size Distribution</h5>
+                                    <h5>Distribución del Tamaño de Respuesta</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.response_sizes_chart }}" class="img-fluid" alt="Response Size Chart">
+                                    <img src="{{ report_data.response_sizes_chart }}" class="img-fluid" alt="Gráfico de Tamaño de Respuesta">
                                 </div>
                             </div>
                         </div>
@@ -64,10 +64,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Requests Over Time</h5>
+                                    <h5>Solicitudes a lo Largo del Tiempo</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.requests_by_day_chart }}" class="img-fluid" alt="Requests By Day Chart">
+                                    <img src="{{ report_data.requests_by_day_chart }}" class="img-fluid" alt="Gráfico de Solicitudes por Día">
                                 </div>
                             </div>
                         </div>
@@ -77,15 +77,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Top 10 Pages</h5>
+                                    <h5>Las 10 Páginas Más Visitadas</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Page URL</th>
-                                                    <th>Requests</th>
+                                                    <th>URL de la Página</th>
+                                                    <th>Solicitudes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -105,15 +105,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>HTTP Status Codes</h5>
+                                    <h5>Códigos de Estado HTTP</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Status Code</th>
-                                                    <th>Count</th>
+                                                    <th>Código de Estado</th>
+                                                    <th>Cantidad</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -135,15 +135,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Top 10 Referrers</h5>
+                                    <h5>Los 10 Referentes Principales</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Referrer</th>
-                                                    <th>Count</th>
+                                                    <th>Referente</th>
+                                                    <th>Cantidad</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -163,15 +163,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Top 10 IPs</h5>
+                                    <h5>Las 10 IPs Principales</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>IP Address</th>
-                                                    <th>Requests</th>
+                                                    <th>Dirección IP</th>
+                                                    <th>Solicitudes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -190,17 +190,17 @@
                     </div>
                 
                 {% elif report_data.type == "apache_error" %}
-                    <!-- Apache Error Log Report -->
-                    <h3 class="mt-4 mb-3">Apache Error Log Analysis</h3>
+                    <!-- Informe de Logs de Error de Apache -->
+                    <h3 class="mt-4 mb-3">Análisis de Logs de Error de Apache</h3>
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>General Statistics</h5>
+                                    <h5>Estadísticas Generales</h5>
                                 </div>
                                 <div class="card-body">
-                                    <p><strong>Total Errors:</strong> {{ report_data.total_errors }}</p>
+                                    <p><strong>Total de Errores:</strong> {{ report_data.total_errors }}</p>
                                 </div>
                             </div>
                         </div>
@@ -208,10 +208,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Error Level Distribution</h5>
+                                    <h5>Distribución de Nivel de Error</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.error_level_chart }}" class="img-fluid" alt="Error Level Chart">
+                                    <img src="{{ report_data.error_level_chart }}" class="img-fluid" alt="Gráfico de Nivel de Error">
                                 </div>
                             </div>
                         </div>
@@ -221,10 +221,10 @@
                         <div class="col-md-12">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Errors Over Time</h5>
+                                    <h5>Errores a lo Largo del Tiempo</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.errors_by_day_chart }}" class="img-fluid" alt="Errors By Day Chart">
+                                    <img src="{{ report_data.errors_by_day_chart }}" class="img-fluid" alt="Gráfico de Errores por Día">
                                 </div>
                             </div>
                         </div>
@@ -234,15 +234,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Most Common Error Messages</h5>
+                                    <h5>Mensajes de Error Más Comunes</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Error Message</th>
-                                                    <th>Count</th>
+                                                    <th>Mensaje de Error</th>
+                                                    <th>Cantidad</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -262,15 +262,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Files with Most Errors</h5>
+                                    <h5>Archivos con Más Errores</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>File</th>
-                                                    <th>Error Count</th>
+                                                    <th>Archivo</th>
+                                                    <th>Cantidad de Errores</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -292,15 +292,15 @@
                         <div class="col-md-12">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Clients Causing Most Errors</h5>
+                                    <h5>Clientes que Causan Más Errores</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Client IP</th>
-                                                    <th>Error Count</th>
+                                                    <th>IP del Cliente</th>
+                                                    <th>Cantidad de Errores</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -319,21 +319,21 @@
                     </div>
                 
                 {% elif report_data.type == "ftp_events" %}
-                    <!-- FTP Events Log Report -->
-                    <h3 class="mt-4 mb-3">FTP Events Analysis</h3>
+                    <!-- Informe de Logs de Eventos FTP -->
+                    <h3 class="mt-4 mb-3">Análisis de Eventos FTP</h3>
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>General Statistics</h5>
+                                    <h5>Estadísticas Generales</h5>
                                 </div>
                                 <div class="card-body">
-                                    <p><strong>Total Events:</strong> {{ report_data.total_events }}</p>
-                                    <p><strong>Login Statistics:</strong></p>
+                                    <p><strong>Total de Eventos:</strong> {{ report_data.total_events }}</p>
+                                    <p><strong>Estadísticas de Inicio de Sesión:</strong></p>
                                     <ul>
-                                        <li>Successful Logins: {{ report_data.login_stats.successful_logins }}</li>
-                                        <li>Failed Logins: {{ report_data.login_stats.failed_logins }}</li>
+                                        <li>Inicios de Sesión Exitosos: {{ report_data.login_stats.successful_logins }}</li>
+                                        <li>Inicios de Sesión Fallidos: {{ report_data.login_stats.failed_logins }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -342,10 +342,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>FTP Actions Distribution</h5>
+                                    <h5>Distribución de Acciones FTP</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.action_chart }}" class="img-fluid" alt="FTP Actions Chart">
+                                    <img src="{{ report_data.action_chart }}" class="img-fluid" alt="Gráfico de Acciones FTP">
                                 </div>
                             </div>
                         </div>
@@ -355,10 +355,10 @@
                         <div class="col-md-12">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>FTP Events Over Time</h5>
+                                    <h5>Eventos FTP a lo Largo del Tiempo</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.events_by_day_chart }}" class="img-fluid" alt="Events By Day Chart">
+                                    <img src="{{ report_data.events_by_day_chart }}" class="img-fluid" alt="Gráfico de Eventos por Día">
                                 </div>
                             </div>
                         </div>
@@ -368,15 +368,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Most Active Users</h5>
+                                    <h5>Usuarios Más Activos</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Username</th>
-                                                    <th>Events</th>
+                                                    <th>Nombre de Usuario</th>
+                                                    <th>Eventos</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -396,15 +396,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Most Active IPs</h5>
+                                    <h5>IPs Más Activas</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>IP Address</th>
-                                                    <th>Events</th>
+                                                    <th>Dirección IP</th>
+                                                    <th>Eventos</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -426,15 +426,15 @@
                         <div class="col-md-12">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Most Accessed Files</h5>
+                                    <h5>Archivos Más Accedidos</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>File Path</th>
-                                                    <th>Access Count</th>
+                                                    <th>Ruta del Archivo</th>
+                                                    <th>Cantidad de Accesos</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -453,22 +453,22 @@
                     </div>
                 
                 {% elif report_data.type == "ftp_transfers" %}
-                    <!-- FTP Transfers Log Report -->
-                    <h3 class="mt-4 mb-3">FTP Transfers Analysis</h3>
+                    <!-- Informe de Logs de Transferencias FTP -->
+                    <h3 class="mt-4 mb-3">Análisis de Transferencias FTP</h3>
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>General Statistics</h5>
+                                    <h5>Estadísticas Generales</h5>
                                 </div>
                                 <div class="card-body">
-                                    <p><strong>Total Transfers:</strong> {{ report_data.total_transfers }}</p>
-                                    <p><strong>Average Transfer Duration:</strong> {{ "%.2f"|format(report_data.avg_duration) }} seconds</p>
-                                    <p><strong>Total Data Transferred:</strong></p>
+                                    <p><strong>Total de Transferencias:</strong> {{ report_data.total_transfers }}</p>
+                                    <p><strong>Duración Media de Transferencia:</strong> {{ "%.2f"|format(report_data.avg_duration) }} segundos</p>
+                                    <p><strong>Datos Totales Transferidos:</strong></p>
                                     <ul>
-                                        <li>Uploads: {{ (report_data.transfer_volume.total_upload_bytes / 1048576)|round(2) }} MB</li>
-                                        <li>Downloads: {{ (report_data.transfer_volume.total_download_bytes / 1048576)|round(2) }} MB</li>
+                                        <li>Subidas: {{ (report_data.transfer_volume.total_upload_bytes / 1048576)|round(2) }} MB</li>
+                                        <li>Descargas: {{ (report_data.transfer_volume.total_download_bytes / 1048576)|round(2) }} MB</li>
                                         <li>Total: {{ (report_data.transfer_volume.total_transfer_bytes / 1048576)|round(2) }} MB</li>
                                     </ul>
                                 </div>
@@ -478,10 +478,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Transfer Direction</h5>
+                                    <h5>Dirección de Transferencia</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.direction_chart }}" class="img-fluid" alt="Transfer Direction Chart">
+                                    <img src="{{ report_data.direction_chart }}" class="img-fluid" alt="Gráfico de Dirección de Transferencia">
                                 </div>
                             </div>
                         </div>
@@ -491,10 +491,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Transfer Size Distribution</h5>
+                                    <h5>Distribución de Tamaño de Transferencia</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.size_chart }}" class="img-fluid" alt="Transfer Size Chart">
+                                    <img src="{{ report_data.size_chart }}" class="img-fluid" alt="Gráfico de Tamaño de Transferencia">
                                 </div>
                             </div>
                         </div>
@@ -502,10 +502,10 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Transfers Over Time</h5>
+                                    <h5>Transferencias a lo Largo del Tiempo</h5>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img src="{{ report_data.transfers_by_day_chart }}" class="img-fluid" alt="Transfers By Day Chart">
+                                    <img src="{{ report_data.transfers_by_day_chart }}" class="img-fluid" alt="Gráfico de Transferencias por Día">
                                 </div>
                             </div>
                         </div>
@@ -515,15 +515,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Transfer Services</h5>
+                                    <h5>Servicios de Transferencia</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Service</th>
-                                                    <th>Count</th>
+                                                    <th>Servicio</th>
+                                                    <th>Cantidad</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -543,15 +543,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Authentication Methods</h5>
+                                    <h5>Métodos de Autenticación</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Auth Method</th>
-                                                    <th>Count</th>
+                                                    <th>Método de Autenticación</th>
+                                                    <th>Cantidad</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -573,15 +573,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Most Active Users</h5>
+                                    <h5>Usuarios Más Activos</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Username</th>
-                                                    <th>Transfers</th>
+                                                    <th>Nombre de Usuario</th>
+                                                    <th>Transferencias</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -601,15 +601,15 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h5>Most Active IPs</h5>
+                                    <h5>IPs Más Activas</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>IP Address</th>
-                                                    <th>Transfers</th>
+                                                    <th>Dirección IP</th>
+                                                    <th>Transferencias</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -629,15 +629,15 @@
                 
                 {% else %}
                     <div class="alert alert-warning">
-                        <h4>Report Not Available</h4>
+                        <h4>Informe No Disponible</h4>
                         <p>{{ report_data.message }}</p>
                     </div>
                 {% endif %}
                 
             {% else %}
                 <div class="alert alert-warning">
-                    <h4>No Data Available</h4>
-                    <p>There is currently no data in any of the log tables. Please ensure logs are being imported correctly.</p>
+                    <h4>No Hay Datos Disponibles</h4>
+                    <p>Actualmente no hay datos en ninguna de las tablas de logs. Por favor, asegúrese de que los logs se están importando correctamente.</p>
                 </div>
             {% endif %}
         </div>

@@ -7,12 +7,7 @@ class AlertsHandler:
     
     def __init__(self):
         """Constructor para AlertsHandler"""
-        self.config = {
-            'host': 'localhost',
-            'user': 'gabriel',
-            'password': 'gabo123',
-            'database': 'bdlogs2'
-        }
+        self.config = config.DB_CONFIG
     
     def get_connection(self):
         """Establece conexión con la base de datos"""
@@ -73,8 +68,9 @@ class AlertsHandler:
             if table_with_data == 'registros_acceso':
                 # Filtramos accesos con códigos de error (4xx y 5xx)
                 cursor.execute("""
-                    SELECT id, ip, fecha_hora, metodo, ruta, codigo_estado
-                    FROM registros_acceso 
+                    SELECT DISTINCT fecha_hora, ip, metodo, ruta, protocolo, codigo_estado, 
+                                    bytes_enviados, referer, user_agent, tiempo_respuesta
+                    FROM registros_acceso
                     WHERE codigo_estado >= 400
                     ORDER BY fecha_hora DESC
                 """)
@@ -85,28 +81,43 @@ class AlertsHandler:
                 cursor.execute("""
                     SELECT id, fecha_hora, nivel_error, cliente, mensaje, archivo, linea
                     FROM registros_error
-                    ORDER BY fecha_hora DESC
-                """)
+                    WHERE nivel_error != 'unknown'
+                    ORDER BY 
+                        CASE nivel_error
+                            WHEN 'emerg' THEN 1
+                            WHEN 'alert' THEN 2
+                            WHEN 'crit' THEN 3
+                            WHEN 'error' THEN 4
+                            WHEN 'warn' THEN 5
+                            WHEN 'notice' THEN 6
+                            WHEN 'info' THEN 7
+                            WHEN 'debug' THEN 8
+                            ELSE 9
+                                END,
+                            fecha_hora DESC;
+                    """)
                 error_logs = cursor.fetchall()
                 
             elif table_with_data == 'registros_ftp':
                 # Filtramos eventos FTP que indiquen errores
                 cursor.execute("""
-                    SELECT id, fecha_hora, usuario, ip, accion, archivo, detalles
+                    SELECT fecha_hora, usuario, ip, accion, archivo, detalles
                     FROM registros_ftp
-                    WHERE detalles LIKE '%FAIL%' OR detalles LIKE '%ERROR%'
-                    ORDER BY fecha_hora DESC;
-                """)
+                    WHERE accion IN ('LOGIN FAIL', 'UPLOAD FAIL', 'ERROR', 'UNAUTHORIZED', 'INVALID COMMAND')
+                        OR detalles LIKE '%fail%' OR detalles LIKE '%error%' OR detalles LIKE '%denied%'
+                    ORDER BY fecha_hora DESC
+                    """)
                 error_logs = cursor.fetchall()
                 
             elif table_with_data == 'transferencias_ftp':
                 # Filtramos transferencias fallidas o con errores
                 cursor.execute("""
-                    SELECT id, fecha_hora, ip_remota, archivo, accion_especial, usuario, servicio
+                    SELECT fecha_hora, duracion, tamaño_archivo, ip_remota, archivo, accion_especial, usuario, servicio
                     FROM transferencias_ftp
-                    WHERE accion_especial LIKE '%error%' OR accion_especial LIKE '%fail%'
-                    ORDER BY fecha_hora DESC
-                """)
+                    WHERE duracion > 120
+                        OR tamaño_archivo > 100000000
+                    ORDER BY fecha_hora DESC;
+                    """)
                 error_logs = cursor.fetchall()
                 
             return {

@@ -1,17 +1,21 @@
-{% extends "base.html" %}
-
-{% block title %}Alertas{% endblock %}
-
-{% block content %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Alertas</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Nuestro CSS personalizado -->
+    <link href="{{ url_for('static', filename='css/alertas.css') }}" rel="stylesheet">
+</head>
+<body>
 <div class="container mt-4">
-<button onclick="window.history.back()" class="btn btn-outline-secondary">← Volver</button>
+    <button onclick="window.history.back()" class="btn btn-outline-secondary">← Volver</button>
 
-    <h2>Alertas y Errores</h2>
+    <h2>Alertas</h2>
     
     <div class="card mb-4">
-        <div class="card-header bg-danger text-white">
-            <h4>Tabla activa: {{ table_name if table_name else "Ninguna tabla contiene datos" }}</h4>
-        </div>
         <div class="card-body">
             {% if not table_name %}
                 <div class="alert alert-warning">
@@ -23,7 +27,7 @@
                 </div>
             {% else %}
                 <div class="alert alert-info">
-                    Se encontraron {{ error_logs|length }} errores en la tabla {{ table_name }}.
+                    Se encontraron {{ error_logs|length }} Alertas
                 </div>
             {% endif %}
         </div>
@@ -32,21 +36,32 @@
     {% if error_logs %}
     <div class="card">
         <div class="card-header bg-dark text-white">
-            <h4>Listado de Errores</h4>
+            <h4>Tabla de Alertas</h4>
         </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-striped table-hover">
                     <thead class="thead-dark">
                         {% if table_name == 'registros_acceso' %}
-                        <tr>
-                            <th>Fecha/Hora</th>
-                            <th>IP</th>
-                            <th>Método</th>
-                            <th>Ruta</th>
-                            <th>Código Estado</th>
-                        </tr>
+                            <div class="alert alert-warning" role="alert">
+        Mostrando accesos con código de estado HTTP 4xx (errores del cliente) y 5xx (errores del servidor).
+    </div>
+<tr>
+    <th>Código Estado</th>
+    <th>Fecha/Hora</th>
+    <th>IP</th>
+    <th>Método</th>
+    <th>Ruta</th>
+    <th>Protocolo</th>
+    <th>Bytes Enviados</th>
+    <th>Referer</th>
+    <th>User Agent</th>
+    <th>Tiempo Respuesta</th>
+</tr>
                         {% elif table_name == 'registros_error' %}
+                            <div class="alert alert-danger" role="alert">
+        Mostrando errores registrados por Apache. Se incluyen niveles críticos como <strong>error</strong>, <strong>crit</strong>, <strong>alert</strong> y <strong>emerg</strong>.
+    </div>
                         <tr>
                             <th>Fecha/Hora</th>
                             <th>Nivel Error</th>
@@ -54,8 +69,10 @@
                             <th>Mensaje</th>
                         </tr>
                         {% elif table_name == 'registros_ftp' %}
+                            <div class="alert alert-warning" role="alert">
+        Mostrando eventos FTP relevantes, como intentos de acceso, cargas/descargas con fallos o comportamientos sospechosos.
+    </div>
                         <tr>
-                            <th>ID</th>
                             <th>Fecha/Hora</th>
                             <th>Usuario</th>
                             <th>IP</th>
@@ -64,28 +81,36 @@
                             <th>Detalles</th>
                         </tr>
                         {% elif table_name == 'transferencias_ftp' %}
-                        <tr>
-                            <th>ID</th>
-                            <th>Fecha/Hora</th>
-                            <th>IP Remota</th>
-                            <th>Archivo</th>
-                            <th>Acción Especial</th>
-                            <th>Usuario</th>
-                            <th>Servicio</th>
-                        </tr>
+                            <div class="alert alert-info" role="alert">
+        Mostrando transferencias FTP con alertas: duración mayor a 120 segundos, archivos mayores a 100 MB
+    </div>
+    <tr>
+        <th>Fecha/Hora</th>
+        <th>Duración (segundos)</th>
+        <th>Tamaño (bytes)</th>
+        <th>IP Remota</th>
+        <th>Archivo</th>
+        <th>Acción Especial</th>
+        <th>Usuario</th>
+        <th>Servicio</th>
+    </tr>
                         {% endif %}
                     </thead>
                     <tbody>
                         {% if table_name == 'registros_acceso' %}
                             {% for log in error_logs %}
-                            <tr class="{% if log.codigo_estado >= 500 %}table-danger{% else %}table-warning{% endif %}">
-                               
-                                <td>{{ log.fecha_hora }}</td>
-                                <td>{{ log.ip }}</td>
-                                <td>{{ log.metodo }}</td>
-                                <td>{{ log.ruta }}</td>
-                                <td>{{ log.codigo_estado }}</td>
-                            </tr>
+<tr class="{% if log.codigo_estado >= 500 %}table-danger{% else %}table-warning{% endif %}">
+    <td>{{ log.codigo_estado }}</td>
+    <td>{{ log.fecha_hora }}</td>
+    <td>{{ log.ip }}</td>
+    <td>{{ log.metodo }}</td>
+    <td>{{ log.ruta }}</td>
+    <td>{{ log.protocolo }}</td>
+    <td>{{ log.bytes_enviados }}</td>
+    <td>{{ log.referer }}</td>
+    <td>{{ log.user_agent }}</td>
+    <td>{{ log.tiempo_respuesta }}</td>
+</tr>
                             {% endfor %}
                         {% elif table_name == 'registros_error' %}
                             {% for log in error_logs %}
@@ -99,7 +124,6 @@
                         {% elif table_name == 'registros_ftp' %}
                             {% for log in error_logs %}
                             <tr>
-                                <td>{{ log.id }}</td>
                                 <td>{{ log.fecha_hora }}</td>
                                 <td>{{ log.usuario }}</td>
                                 <td>{{ log.ip }}</td>
@@ -110,22 +134,149 @@
                             {% endfor %}
                         {% elif table_name == 'transferencias_ftp' %}
                             {% for log in error_logs %}
-                            <tr>
-                                <td>{{ log.id }}</td>
-                                <td>{{ log.fecha_hora }}</td>
-                                <td>{{ log.ip_remota }}</td>
-                                <td>{{ log.archivo }}</td>
-                                <td>{{ log.accion_especial }}</td>
-                                <td>{{ log.usuario }}</td>
-                                <td>{{ log.servicio }}</td>
-                            </tr>
+    <tr>
+        <td>{{ log.fecha_hora }}</td>
+        <td>{{ log.duracion }}</td>
+        <td>{{ log.tamaño_archivo }}</td>
+        <td>{{ log.ip_remota }}</td>
+        <td>{{ log.archivo }}</td>
+        <td>{{ log.accion_especial }}</td>
+        <td>{{ log.usuario }}</td>
+        <td>{{ log.servicio }}</td>
+    </tr>
                             {% endfor %}
                         {% endif %}
                     </tbody>
                 </table>
             </div>
+            
+            {% if error_logs|length > 10 %}
+            <!-- Paginación -->
+            <div class="pagination-container mt-4">
+                <nav aria-label="Navegación de página">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Anterior</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        {% if error_logs|length > 30 %}
+                        <li class="page-item"><span class="page-link">...</span></li>
+                        <li class="page-item"><a class="page-link" href="#">{{ (error_logs|length / 10)|round(0, 'ceil')|int }}</a></li>
+                        {% endif %}
+                        <li class="page-item">
+                            <a class="page-link" href="#">Siguiente</a>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="page-info text-center mt-2">
+                    Mostrando <span class="fw-bold">1-10</span> de <span class="fw-bold">{{ error_logs|length }}</span> resultados
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}
 </div>
-{% endblock %}
+
+<!-- Bootstrap JS y Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Script para paginación -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables para paginación
+    const itemsPerPage = 10;
+    const tableRows = document.querySelectorAll('tbody tr');
+    const totalItems = tableRows.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    let currentPage = 1;
+    
+    // Elementos de paginación
+    const pageLinks = document.querySelectorAll('.pagination .page-link');
+    const pageInfo = document.querySelector('.page-info');
+    
+    // Función para mostrar página actual
+    function showPage(page) {
+        // Ocultar todas las filas
+        tableRows.forEach(row => {
+            row.style.display = 'none';
+        });
+        
+        // Calcular índices para la página actual
+        const start = (page - 1) * itemsPerPage;
+        const end = Math.min(start + itemsPerPage, totalItems);
+        
+        // Mostrar filas de la página actual
+        for (let i = start; i < end; i++) {
+            if (tableRows[i]) {
+                tableRows[i].style.display = '';
+            }
+        }
+        
+        // Actualizar información de página
+        if (pageInfo) {
+            pageInfo.innerHTML = `Mostrando <span class="fw-bold">${start + 1}-${end}</span> de <span class="fw-bold">${totalItems}</span> resultados`;
+        }
+        
+        // Actualizar estado de botones
+        updatePaginationButtons(page);
+    }
+    
+    // Actualizar estado de botones de paginación
+    function updatePaginationButtons(page) {
+        // Activar/desactivar botones Anterior/Siguiente
+        document.querySelector('.pagination .page-item:first-child').classList.toggle('disabled', page === 1);
+        document.querySelector('.pagination .page-item:last-child').classList.toggle('disabled', page === totalPages);
+        
+        // Actualizar clase active en números de página
+        document.querySelectorAll('.pagination .page-item').forEach((item, index) => {
+            if (index > 0 && index < document.querySelectorAll('.pagination .page-item').length - 1) {
+                item.classList.remove('active');
+            }
+        });
+        
+        // Encontrar y activar el botón de página actual
+        const pageButtons = Array.from(document.querySelectorAll('.pagination .page-link')).filter(link => 
+            !isNaN(parseInt(link.textContent))
+        );
+        
+        pageButtons.forEach(button => {
+            if (parseInt(button.textContent) === page) {
+                button.parentElement.classList.add('active');
+            }
+        });
+    }
+    
+    // Agregar eventos a botones de paginación
+    pageLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const linkText = this.textContent;
+            
+            if (linkText === 'Anterior') {
+                if (currentPage > 1) {
+                    currentPage--;
+                    showPage(currentPage);
+                }
+            } else if (linkText === 'Siguiente') {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    showPage(currentPage);
+                }
+            } else if (!isNaN(parseInt(linkText))) {
+                currentPage = parseInt(linkText);
+                showPage(currentPage);
+            }
+        });
+    });
+    
+    // Inicializar: mostrar primera página
+    if (totalItems > 0) {
+        showPage(1);
+    }
+});
+</script>
+</body>
+</html>
