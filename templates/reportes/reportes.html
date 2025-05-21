@@ -1,0 +1,238 @@
+{% extends "reportes/layout.html" %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Reportes</h1>
+<button onclick="window.history.back()" class="btn btn-outline-secondary">← Volver</button>
+<!-- Formulario arriba, de ancho completo -->
+<div class="card mb-12 shadow-sm">
+  <div class="card-body">
+    <form id="form-busqueda"  class="row g-3">
+      <div class="col-md-4">
+        <label for="texto" class="form-label">Texto a buscar:</label>
+        <input type="text" name="texto" id="texto" class="form-control">
+      </div>
+
+      <div class="col-md-4">
+        <label for="modo" class="form-label">Modo:</label>
+        <select name="modo" id="modo" class="form-select" onchange="toggleFechas()">
+          <option value="todo">Todo</option>
+          <option value="diario">Diario</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensual">Mensual</option>
+          <option value="rango">Por rango</option>
+        </select>
+      </div>
+
+      <div class="col-md-4" id="fechas" style="display: none;">
+        <label class="form-label">Desde:</label>
+        <input type="date" name="desde" class="form-control mb-2">
+        <label class="form-label">Hasta:</label>
+        <input type="date" name="hasta" class="form-control">
+      </div>
+
+      <div class="col-12 text-end">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Contenido principal con pestañas -->
+<div class="card shadow-sm">
+  <div class="card-body">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="reportesTabs" role="tablist">
+      {% if resultados['mostrar'] == 'vsftpd' %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="vsftpd-tab" data-bs-toggle="tab" data-bs-target="#vsftpd" type="button" role="tab">
+            FTP logs
+          </button>
+        </li>
+      {% endif %}
+      {% if resultados['mostrar'] == 'xfer' %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="xfer-tab" data-bs-toggle="tab" data-bs-target="#xfer" type="button" role="tab">
+            FTP xferlogs
+          </button>
+        </li>
+      {% endif %}
+      {% if resultados['mostrar'] == 'apache' %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="apache-tab" data-bs-toggle="tab" data-bs-target="#apache" type="button" role="tab">
+            Logs Apache
+          </button>
+        </li>
+      {% endif %}
+      {% if resultados['mostrar'] == 'apache_error' %}
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="apache_error-tab" data-bs-toggle="tab" data-bs-target="#apache_error" type="button" role="tab">
+          Errors Apache
+        </button>
+      </li>
+      {% endif %}
+      
+      
+      
+      
+    </ul>
+
+    <!-- Tab panes -->
+
+    
+    <div class="tab-content">
+
+
+      {% if resultados['mostrar'] == 'vsftpd' %}
+         <div class="tab-pane fade show active" id="vsftpd" role="tabpanel">
+        <div id="contenido-vsftpd">
+          
+        </div>
+      </div>
+      {% endif %}
+      {% if resultados['mostrar'] == 'xfer' %}
+       <div class="tab-pane fade show active" id="xfer" role="tabpanel">
+        <div id="contenido-xfer">
+          
+        </div>
+
+      </div>
+      {% endif %}
+      {% if resultados['mostrar'] == 'apache' %}
+        <div class="tab-pane fade show active" id="apache" role="tabpanel">
+        <div id="contenido-apache">
+          
+        </div>
+
+      </div>
+      {% endif %}
+      {% if resultados['mostrar'] == 'apache_error' %}
+      <div class="tab-pane fade show active" id="apache_error" role="tabpanel">
+        <div id="contenido-apache_error">
+          
+        </div>
+
+      </div>
+      {% endif %}
+
+
+     
+
+      
+      
+      
+      
+    </div>
+  </div>
+</div>
+
+<script>
+              
+        
+  
+  async function exportarExcel(tipo) {
+    const form = document.querySelector('#form-busqueda');
+    const formData = new FormData(form);
+
+      const filtros = {
+        'texto': formData.get('texto'),
+        'modo': formData.get('modo'),
+        'desde': formData.get('desde'),
+        'hasta': formData.get('hasta'),
+        'tipo':tipo
+      }
+    // 2. Enviar datos al servidor
+    const response = await fetch("/exportar_excel", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(filtros)
+    });
+
+    if (!response.ok) {
+      alert("Error al generar el archivo.");
+      return;
+    }
+
+    // 3. Descargar el archivo Excel
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = await obtenerNombreDesdeCabecera(response.headers) || "reporte.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+
+
+  async function obtenerNombreDesdeCabecera(headers) {
+    const disposition = headers.get("Content-Disposition");
+    if (disposition && disposition.includes("filename=")) {
+      return disposition.split("filename=")[1].replace(/["']/g, "");
+    }
+    return null;
+  }
+
+</script>
+<script>
+  function toggleFechas() {
+    const modo = document.getElementById("modo").value;
+    const fechaDiv = document.getElementById("fechas");
+    fechaDiv.style.display = (modo === "rango") ? "block" : "none";
+  }
+
+  function cargarResultados(tipo) {
+    const form = document.querySelector('#form-busqueda');
+    const formData = new FormData(form);
+
+    fetch(`/filtros_registro/${tipo}`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.text())
+    .then(html => {
+      if (tipo === "vsftpd") {
+        document.getElementById("contenido-vsftpd").innerHTML = html;
+      } else if (tipo === "xfer") {
+        document.getElementById("contenido-xfer").innerHTML = html;
+      }else if (tipo === "apache") {
+        document.getElementById("contenido-apache").innerHTML = html;
+      }else if (tipo === "apache_error") {
+        document.getElementById("contenido-apache_error").innerHTML = html;
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    toggleFechas();
+
+    // Carga inicial
+
+    const tabActiva = document.querySelector('.tab-pane.active');
+    if (tabActiva) {
+      cargarResultados(tabActiva.id);
+    }
+
+    // Cambio de pestañas
+    document.querySelectorAll('.nav-link').forEach(tab => {
+      tab.addEventListener('click', function () {
+        const tipo = this.getAttribute('data-bs-target').substring(1); // elimina el #
+        cargarResultados(tipo);
+      });
+    });
+
+    // Evitar que el form recargue la página
+    document.querySelector('#form-busqueda').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const activa = document.querySelector('.tab-pane.active').id;
+      cargarResultados(activa);
+    });
+  });
+</script>
+{% endblock %}
