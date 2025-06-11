@@ -116,7 +116,7 @@ class FTPParser:
                         for action_key, action_value in action_map.items():
                             if action_key in line:
                                 accion = action_value
-                                if action_key in ['STOR ', 'RETR ', 'DELE ', 'MKD ', 'RMD ', 'CWD ']:
+                                if action_key in ['STOR ', 'RETR ', 'DELE ', 'MKD ', 'CWD ']:
                                     parts = line.split(action_key, 1)
                                     if len(parts) > 1:
                                         file_part = parts[1].strip()
@@ -195,11 +195,21 @@ class FTPParser:
                             except:
                                 tamano_archivo = 0
                                 
-                            # Normalizar tipo_transferencia (a=ASCII, b=Binary)
-                            tipo_transferencia = tipo_transferencia.upper()
+                            # Convertir tipo_transferencia (a=ASCII, b=Binaria)
+                            if tipo_transferencia.lower() == 'a':
+                                tipo_transferencia = 'ASCII'
+                            elif tipo_transferencia.lower() == 'b':
+                                tipo_transferencia = 'Binaria'
+                            else:
+                                tipo_transferencia = tipo_transferencia.upper()
                             
-                            # Normalizar dirección (i=IN/upload, o=OUT/download)
-                            direccion_normalizada = 'IN' if direccion.lower() == 'i' else 'OUT'
+                            # Guardar dirección como 'Subida' para 'i', 'Bajada' para 'o'
+                            if direccion.lower() == 'i':
+                                direccion_db = 'Subida'
+                            elif direccion.lower() == 'o':
+                                direccion_db = 'Bajada'
+                            else:
+                                direccion_db = direccion
                             
                             entry = {
                                 'fecha_hora': self.parse_date(date_time),
@@ -210,7 +220,7 @@ class FTPParser:
                                 'archivo': archivo,
                                 'tipo_transferencia': tipo_transferencia,
                                 'accion_especial': accion_especial,
-                                'direccion': direccion_normalizada,
+                                'direccion': direccion_db,
                                 'usuario': usuario,
                                 'servicio': servicio,
                                 'metodo_autenticacion': autenticacion,
@@ -237,6 +247,22 @@ class FTPParser:
                                 except:
                                     tamano_archivo = 0
                                 
+                                # Convertir tipo_transferencia (a=ASCII, b=Binaria)
+                                if tipo_transferencia.lower() == 'a':
+                                    tipo_transferencia = 'ASCII'
+                                elif tipo_transferencia.lower() == 'b':
+                                    tipo_transferencia = 'Binaria'
+                                else:
+                                    tipo_transferencia = tipo_transferencia.upper()
+                                
+                                # Guardar dirección como 'Subida' para 'i', 'Bajada' para 'o'
+                                if direccion.lower() == 'i':
+                                    direccion_db = 'Subida'
+                                elif direccion.lower() == 'o':
+                                    direccion_db = 'Bajada'
+                                else:
+                                    direccion_db = direccion
+                                
                                 entry = {
                                     'fecha_hora': self.parse_date(date_time),
                                     'duracion': duracion,
@@ -246,7 +272,7 @@ class FTPParser:
                                     'archivo': archivo,
                                     'tipo_transferencia': tipo_transferencia,
                                     'accion_especial': accion_especial,
-                                    'direccion': direccion,
+                                    'direccion': direccion_db,
                                     'usuario': usuario,
                                     'servicio': servicio,
                                     'metodo_autenticacion': autenticacion,
@@ -277,11 +303,22 @@ class FTPParser:
                                         tamano_archivo = 0
                                         
                                     archivo = parts[8]
-                                    tipo_transferencia = parts[9].upper()  # a/b -> A/B
+                                    # Convertir tipo_transferencia (a=ASCII, b=Binaria)
+                                    if parts[9].lower() == 'a':
+                                        tipo_transferencia = 'ASCII'
+                                    elif parts[9].lower() == 'b':
+                                        tipo_transferencia = 'Binaria'
+                                    else:
+                                        tipo_transferencia = parts[9].upper()
                                     accion_especial = parts[10]
-                                    direccion = 'IN' if parts[11].lower() == 'i' else 'OUT'
+                                    # Guardar dirección como 'Subida' para 'i', 'Bajada' para 'o'
+                                    if parts[11].lower() == 'i':
+                                        direccion_db = 'Subida'
+                                    elif parts[11].lower() == 'o':
+                                        direccion_db = 'Bajada'
+                                    else:
+                                        direccion_db = parts[11]
                                     
-                                    # Los campos restantes pueden variar según la implementación
                                     usuario = parts[12] if len(parts) > 12 else 'unknown'
                                     servicio = parts[13] if len(parts) > 13 else 'ftp'
                                     
@@ -294,7 +331,7 @@ class FTPParser:
                                         'archivo': archivo,
                                         'tipo_transferencia': tipo_transferencia,
                                         'accion_especial': accion_especial,
-                                        'direccion': direccion,
+                                        'direccion': direccion_db,
                                         'usuario': usuario,
                                         'servicio': servicio,
                                         'metodo_autenticacion': 'password',  # Valor por defecto

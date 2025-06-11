@@ -1,5 +1,6 @@
-import mysql.connector
-from mysql.connector import Error
+import pymysql
+import pymysql.cursors
+from pymysql import Error
 import config
 
 class AlertsHandler:
@@ -12,11 +13,13 @@ class AlertsHandler:
     def get_connection(self):
         """Establece conexión con la base de datos"""
         try:
-            connection = mysql.connector.connect(
+            # Use pymysql for consistency with the Database class
+            connection = pymysql.connect(
                 host=self.config['host'],
                 user=self.config['user'],
                 password=self.config['password'],
-                database=self.config['database']
+                database=self.config['database'],
+                cursorclass=pymysql.cursors.DictCursor
             )
             return connection
         except Error as e:
@@ -35,8 +38,9 @@ class AlertsHandler:
         
         try:
             for table in tables:
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                count = cursor.fetchone()[0]
+                cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
+                result = cursor.fetchone()
+                count = result['count'] if result else 0
                 if count > 0:
                     table_with_data = table
                     break
@@ -46,21 +50,21 @@ class AlertsHandler:
             print(f"Error identificando tabla con datos: {e}")
             return None
         finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
+            # pymysql no tiene método is_connected()
+            cursor.close()
+            connection.close()
     
     def get_error_logs(self):
         """Obtiene logs de error según la tabla que contiene datos"""
         table_with_data = self.identify_table_with_data()
         if not table_with_data:
-            return []
+            return {'table': None, 'logs': []}
         
         connection = self.get_connection()
         if not connection:
-            return []
+            return {'table': table_with_data, 'logs': []}
         
-        cursor = connection.cursor(dictionary=True)
+        cursor = connection.cursor()
         error_logs = []
         
         try:
@@ -132,9 +136,9 @@ class AlertsHandler:
                 'logs': []
             }
         finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
+            # pymysql no tiene método is_connected()
+            cursor.close()
+            connection.close()
 
 # Función para usar externamente
 def get_alerts():

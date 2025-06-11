@@ -1,0 +1,13 @@
+.log-table#logTable td:nth-child(5) {
+    min-width: 400px !important; 
+    max-width: 450px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Ajustar el encabezado de la columna correspondiente */
+.log-table#logTable th:nth-child(5) {
+    min-width: 400px !important;
+    max-width: 450px !important;
+}

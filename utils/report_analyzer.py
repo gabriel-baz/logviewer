@@ -1,7 +1,10 @@
 import pymysql
-import mysql.connector
+import pymysql.cursors
+from pymysql import Error
 import pandas as pd
 from datetime import datetime, timedelta
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 import base64

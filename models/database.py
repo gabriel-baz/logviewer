@@ -1,9 +1,20 @@
 import pymysql
+import pymysql.cursors
+from pymysql import Error
 import config
 from datetime import datetime
-import mysql.connector
-from mysql.connector import Error
 from typing import Dict, Any
+
+# Importar las funciones de búsqueda desde un archivo separado
+from models.search_functions import (search_access_logs, count_search_access_logs,
+                                   search_access_logs_advanced, count_search_access_logs_advanced,
+                                   search_error_logs, count_search_error_logs,
+                                   search_error_logs_advanced, count_search_error_logs_advanced,
+                                   search_ftp_logs, count_search_ftp_logs,
+                                   search_ftp_logs_advanced, count_search_ftp_logs_advanced,
+                                   search_ftp_transfers, count_search_ftp_transfers,
+                                   search_ftp_transfers_advanced, count_search_ftp_transfers_advanced)
+
 class Database:
 
     def __init__(self):
@@ -222,12 +233,30 @@ class Database:
         conn = self.get_connection()
         try:
             with conn.cursor() as cursor:
+                # Eliminar todos los registros
                 cursor.execute("DELETE FROM registros_acceso")
                 cursor.execute("DELETE FROM registros_error")
                 cursor.execute("DELETE FROM registros_ftp")
                 cursor.execute("DELETE FROM transferencias_ftp")
+                
+                # Reiniciar los contadores AUTO_INCREMENT
+                cursor.execute("ALTER TABLE registros_acceso AUTO_INCREMENT = 1")
+                cursor.execute("ALTER TABLE registros_error AUTO_INCREMENT = 1")
+                cursor.execute("ALTER TABLE registros_ftp AUTO_INCREMENT = 1")
+                cursor.execute("ALTER TABLE transferencias_ftp AUTO_INCREMENT = 1")
+                
                 conn.commit()
         except Exception as e:
             print(f"Error al limpiar la base de datos: {e}")
         finally:
             conn.close()
+            
+    # Importar las funciones de búsqueda
+    from models.search_functions import (search_access_logs, count_search_access_logs,
+                                        search_access_logs_advanced, count_search_access_logs_advanced,
+                                        search_error_logs, count_search_error_logs,
+                                        search_error_logs_advanced, count_search_error_logs_advanced,
+                                        search_ftp_logs, count_search_ftp_logs,
+                                        search_ftp_logs_advanced, count_search_ftp_logs_advanced,
+                                        search_ftp_transfers, count_search_ftp_transfers,
+                                        search_ftp_transfers_advanced, count_search_ftp_transfers_advanced)

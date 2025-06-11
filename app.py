@@ -15,6 +15,30 @@ app.secret_key = config.SECRET_KEY
 
 db = Database()
 
+# Asegurar que las variables de paginación estén siempre disponibles
+@app.context_processor
+def inject_pagination_defaults():
+    """Inyecta variables por defecto para la paginación"""
+    return {
+        'page': 1,
+        'total_pages': 1,
+        'total_logs': 0,
+        'page_range': [1]
+    }
+
+# Función auxiliar para crear URL de paginación sin parámetro page duplicado
+@app.template_filter('url_without_page_param')
+def url_without_page_param(endpoint, **kwargs):
+    """Genera una URL para la paginación sin el parámetro page duplicado"""
+    args = request.args.copy()
+    # Eliminar 'page' de los argumentos si existe
+    if 'page' in args:
+        del args['page']
+    # Añadir todos los demás argumentos
+    for key, value in kwargs.items():
+        args[key] = value
+    return url_for(endpoint, **args)
+
 
 def before_first_request():
     """Limpiar la base de datos antes de la primera solicitud"""
@@ -41,7 +65,67 @@ def index():
 
 @app.route('/logs/view')
 def logs_view():
-    return render_template('logs_view.html')
+    """Muestra todos los registros disponibles, detectando qué tabla tiene datos"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Verificar cada tabla y mostrar la primera que tenga datos
+    if db.count_access_logs() > 0:
+        logs = db.get_access_logs(page, per_page)
+        total = db.count_access_logs()
+        log_type = 'apache_access'
+    elif db.count_error_logs() > 0:
+        logs = db.get_error_logs(page, per_page)
+        total = db.count_error_logs()
+        log_type = 'apache_error'
+    elif db.count_ftp_logs() > 0:
+        logs = db.get_ftp_logs(page, per_page)
+        total = db.count_ftp_logs()
+        log_type = 'ftp_log'
+    elif db.count_ftp_transfers() > 0:
+        logs = db.get_ftp_transfers(page, per_page)
+        total = db.count_ftp_transfers()
+        log_type = 'ftp_transfer'
+    else:
+        logs = []
+        total = 0
+        log_type = 'none'
+    
+    # Asegúrate de que total no sea None o 0 antes de calcular total_pages
+    total = total or 0
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+    
+    # Calcular el rango de páginas para la paginación
+    start_page = max(1, page - 2)
+    end_page = min(total_pages + 1, page + 3)
+    page_range = list(range(start_page, end_page))
+    
+    # Valores predeterminados para la búsqueda
+    search_term = ""
+    is_advanced = False
+    
+    # Inicializar todos los parámetros de búsqueda con valores por defecto
+    search_params = {
+        'startDate': '',
+        'endDate': '',
+        'term1': '',
+        'operator': 'AND',
+        'term2': '',
+        'filterField': '',
+        'filterValue': ''
+    }
+    
+    return render_template('logs_view.html', 
+                           logs=logs, 
+                           log_type=log_type,
+                           filename='',
+                           page=page,
+                           total_pages=total_pages,
+                           total_logs=total,
+                           page_range=page_range,
+                           search_term=search_term,
+                           is_advanced=is_advanced,
+                           search_params=search_params)
 
 @app.route('/search')
 def search():
@@ -220,12 +304,43 @@ def view_log(log_type, filename):
     total = total or 0  # Si total es None o 0, se asigna 0
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
     
+    # Calcular el rango de páginas para la paginación
+    start_page = max(1, page - 2)
+    end_page = min(total_pages + 1, page + 3)
+    page_range = list(range(start_page, end_page))
+    
+    # Valores predeterminados para que la plantilla no dé error
+    search_term = ""
+    is_advanced = False
+    
+    # Inicializar todos los parámetros de búsqueda con valores por defecto
+    search_params = {
+        'start_date': '',
+        'end_date': '',
+        'term1': '',
+        'operator': 'AND',
+        'term2': '',
+        'filter_field': '',
+        'filter_value': '',
+        'searchTerm': '',
+        'advancedSearch': '',
+        'startDate': '',
+        'endDate': '',
+        'filterField': '',
+        'filterValue': ''
+    }
+    
     return render_template('logs_view.html', 
                            logs=logs, 
                            log_type=log_type, 
                            filename=filename,
                            page=page,
-                           total_pages=total_pages)
+                           total_pages=total_pages,
+                           total_logs=total,
+                           page_range=page_range,
+                           search_term=search_term,
+                           is_advanced=is_advanced,
+                           search_params=search_params)
 
 @app.route('/api/logs/<log_type>')
 def api_get_logs(log_type):
@@ -381,6 +496,11 @@ def search_logs():
         total = total or 0
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
         
+        # Calcular el rango de páginas para la paginación
+        start_page = max(1, page - 2)
+        end_page = min(total_pages + 1, page + 3)
+        page_range = list(range(start_page, end_page))
+        
         # Mostrar resultados usando la misma plantilla logs_view.html
         return render_template('logs_view.html',
                                logs=logs,
@@ -388,6 +508,8 @@ def search_logs():
                                filename=None,  # No hay archivo específico
                                page=page,
                                total_pages=total_pages,
+                               total_logs=total,
+                               page_range=page_range,
                                search_term=search_term,
                                is_advanced=is_advanced,
                                search_params=request.args)
@@ -432,4 +554,4 @@ def alerts():
     )
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

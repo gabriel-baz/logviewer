@@ -3,6 +3,7 @@
 {% block title %}Visualización de Logs - LogViewer{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/archivo_column.css') }}">
 <style>
     /* Styling for search highlights and hidden rows */
     mark {
@@ -31,6 +32,52 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+    
+    /* El estilo para la columna de archivo se define en archivo_column.css */
+    
+    /* Table responsive container */
+    .log-container {
+        overflow-x: auto;
+        position: relative;
+        min-height: 300px;
+    }
+    
+    /* Loading indicator */
+    .loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    /* No data message */
+    .no-data {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+    
+    /* Paginación styles */
+    .pagination {
+        justify-content: center;
+        margin-top: 20px;
+    }
+    .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .page-link {
+        color: #007bff;
+    }
+    .page-link:hover {
+        color: #0056b3;
     }
 </style>
 
@@ -70,15 +117,15 @@
     <h5 class="mb-0">Buscador de Logs</h5>
   </div>
   <div class="card-body">
-    <form id="searchForm">
+    <form id="searchForm" action="{{ url_for('search_logs') }}" method="GET">
       <div class="row mb-3">
         <div class="col-md-6">
           <label for="searchTerm" class="form-label">Búsqueda básica:</label>
-          <input type="text" class="form-control" id="searchTerm" name="searchTerm" placeholder="Buscar ocurrencia de texto...">
+          <input type="text" class="form-control" id="searchTerm" name="searchTerm" placeholder="Buscar ocurrencia de texto..." value="{{ search_term|default('') }}">
         </div>
         <div class="col-md-6">
           <div class="form-check mt-4">
-            <input class="form-check-input" type="checkbox" id="advancedSearch" name="advancedSearch">
+            <input class="form-check-input" type="checkbox" id="advancedSearch" name="advancedSearch" {% if is_advanced %}checked{% endif %}>
             <label class="form-check-label" for="advancedSearch">
               Búsqueda avanzada
             </label>
@@ -86,15 +133,15 @@
         </div>
       </div>
       
-      <div id="advancedOptions" style="display: none;">
+      <div id="advancedOptions" style="display: {% if is_advanced %}block{% else %}none{% endif %};">
         <div class="row mb-3">
           <div class="col-md-6">
             <label for="startDate" class="form-label">Fecha inicio:</label>
-            <input type="datetime-local" class="form-control" id="startDate" name="startDate">
+            <input type="datetime-local" class="form-control" id="startDate" name="startDate" value="{{ search_params.startDate|default('') }}">
           </div>
           <div class="col-md-6">
             <label for="endDate" class="form-label">Fecha fin:</label>
-            <input type="datetime-local" class="form-control" id="endDate" name="endDate">
+            <input type="datetime-local" class="form-control" id="endDate" name="endDate" value="{{ search_params.endDate|default('') }}">
           </div>
         </div>
         
@@ -103,23 +150,63 @@
             <label class="form-label">Operadores lógicos:</label>
             <div class="d-flex">
               <div class="input-group me-2">
-                <input type="text" class="form-control" id="term1" placeholder="Término 1">
+                <input type="text" class="form-control" id="term1" name="term1" placeholder="Término 1" value="{{ search_params.term1|default('') }}">
               </div>
-              <select class="form-select me-2" id="logicOperator" style="width: auto;">
-                <option value="AND">AND</option>
-                <option value="OR">OR</option>
+              <select class="form-select me-2" id="operator" name="operator" style="width: auto;">
+                <option value="AND" {% if search_params.operator == 'AND' %}selected{% endif %}>AND</option>
+                <option value="OR" {% if search_params.operator == 'OR' %}selected{% endif %}>OR</option>
               </select>
               <div class="input-group">
-                <input type="text" class="form-control" id="term2" placeholder="Término 2">
+                <input type="text" class="form-control" id="term2" name="term2" placeholder="Término 2" value="{{ search_params.term2|default('') }}">
               </div>
             </div>
           </div>
         </div>
+        
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="filterField" class="form-label">Campo específico:</label>
+            <select class="form-select" id="filterField" name="filterField">
+              <option value="">Seleccionar campo</option>
+              {% if log_type == 'apache_access' %}
+                <option value="ip" {% if search_params.filterField == 'ip' %}selected{% endif %}>IP</option>
+                <option value="metodo" {% if search_params.filterField == 'metodo' %}selected{% endif %}>Método</option>
+                <option value="ruta" {% if search_params.filterField == 'ruta' %}selected{% endif %}>Ruta</option>
+                <option value="codigo_estado" {% if search_params.filterField == 'codigo_estado' %}selected{% endif %}>Estado</option>
+                <option value="user_agent" {% if search_params.filterField == 'user_agent' %}selected{% endif %}>Navegador</option>
+              {% elif log_type == 'apache_error' %}
+                <option value="nivel_error" {% if search_params.filterField == 'nivel_error' %}selected{% endif %}>Nivel</option>
+                <option value="cliente" {% if search_params.filterField == 'cliente' %}selected{% endif %}>Cliente</option>
+                <option value="mensaje" {% if search_params.filterField == 'mensaje' %}selected{% endif %}>Mensaje</option>
+                <option value="archivo" {% if search_params.filterField == 'archivo' %}selected{% endif %}>Archivo</option>
+              {% elif log_type == 'ftp_log' %}
+                <option value="usuario" {% if search_params.filterField == 'usuario' %}selected{% endif %}>Usuario</option>
+                <option value="ip" {% if search_params.filterField == 'ip' %}selected{% endif %}>IP</option>
+                <option value="accion" {% if search_params.filterField == 'accion' %}selected{% endif %}>Acción</option>
+                <option value="archivo" {% if search_params.filterField == 'archivo' %}selected{% endif %}>Archivo</option>
+                <option value="detalles" {% if search_params.filterField == 'detalles' %}selected{% endif %}>Detalles</option>
+              {% elif log_type == 'ftp_transfer' %}
+                <option value="usuario" {% if search_params.filterField == 'usuario' %}selected{% endif %}>Usuario</option>
+                <option value="ip_remota" {% if search_params.filterField == 'ip_remota' %}selected{% endif %}>IP</option>
+                <option value="archivo" {% if search_params.filterField == 'archivo' %}selected{% endif %}>Archivo</option>
+                <option value="servidor" {% if search_params.filterField == 'servidor' %}selected{% endif %}>Servidor</option>
+                <option value="direccion" {% if search_params.filterField == 'direccion' %}selected{% endif %}>Dirección</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label for="filterValue" class="form-label">Valor:</label>
+            <input type="text" class="form-control" id="filterValue" name="filterValue" value="{{ search_params.filterValue|default('') }}">
+          </div>
+        </div>
       </div>
       
+      <!-- Campo oculto para mantener el tipo de log -->
+      <input type="hidden" name="log_type" value="{{ log_type }}">
+      
       <div class="mt-3">
-        <button type="button" id="searchButton" class="btn btn-primary">Buscar</button>
-        <button type="reset" id="resetButton" class="btn btn-secondary ms-2">reset</button>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        <a href="{{ url_for('view_log', log_type=log_type, filename=filename) if filename else url_for('logs_view') }}" class="btn btn-secondary ms-2">Limpiar</a>
       </div>
     </form>
   </div>
@@ -257,7 +344,7 @@
                                     <th>Fecha/Hora</th>
                                     <th>Usuario</th>
                                     <th>IP</th>
-                                    <th>Archivo</th>
+                                    <th class="archivo-column">Archivo</th>
                                     <th>Tamaño</th>
                                     <th>Dirección</th>
                                     <th>Duración</th>
@@ -278,9 +365,9 @@
                                     <td>{{ log.fecha_hora }}</td>
                                     <td>{{ log.usuario }}</td>
                                     <td>{{ log.ip_remota }}</td>
-                                    <td title="{{ log.archivo }}">{{ log.archivo|truncate(30) }}</td>
+                                    <td title="{{ log.archivo }}">{{ log.archivo|truncate(107) }}</td>
                                     <td>{{ log.tamaño_archivo }}</td>
-                                    <td>{{ 'Subida' if log.direccion == 'i' else 'Descarga' }}</td>
+                                    <td>{{ log.direccion }}</td>
                                     <td>{{ log.duracion }}seg</td>
                                     <td>{{ log.servidor }}</td>
                                     <td>{{ log.tipo_transferencia }}</td>
@@ -293,10 +380,62 @@
                             </tbody>
                         </table>
                     {% else %}
-                        <div class="p-4 text-center">
+                        <div class="p-4 text-center no-data">
                             <p>Seleccione un tipo de log para visualizar</p>
                         </div>
                     {% endif %}
+                    
+                    {% if logs is defined and logs|length == 0 %}
+                        <div class="p-4 text-center no-data">
+                            <p>No se encontraron registros para mostrar</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <!-- Paginación -->
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ request.endpoint | url_without_page_param(page=page-1, log_type=log_type, filename=filename) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for p in page_range %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="{{ request.endpoint | url_without_page_param(page=p, log_type=log_type, filename=filename) }}">
+                                    {{ p }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                        
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ request.endpoint | url_without_page_param(page=page+1, log_type=log_type, filename=filename) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                
+                <div class="text-center mt-2">
+                    <small>Página {{ page }} de {{ total_pages }} ({{ total_logs }} registros)</small>
+                    <br>
+                    <small id="visible-count">{% if logs|length < total_logs %}Mostrando {{ logs|length }} de {{ total_logs }} registros{% else %}{{ total_logs }} registros en total{% endif %}</small>
                 </div>
             </div>
         </div>
@@ -315,6 +454,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const advancedOptions = document.getElementById('advancedOptions');
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
+    
+    // Solo inicializar elementos de búsqueda si existen
+    if (searchButton && resetButton) {
+        // Configuración de la búsqueda
+        if (advancedSearchCheckbox) {
+            advancedSearchCheckbox.addEventListener('change', function() {
+                advancedOptions.style.display = this.checked ? 'block' : 'none';
+            });
+        }
+    }
+    
+    // Inicializar el contador de registros visibles al cargar
+    updateVisibleRowsCount();
+    
+    // Añadir el indicador de carga cuando se hace clic en los enlaces de paginación
+    document.querySelectorAll('.pagination .page-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (!this.parentElement.classList.contains('disabled') && !this.parentElement.classList.contains('active')) {
+                // Mostrar indicador de carga
+                const logContainer = document.querySelector('.log-container');
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'loading';
+                loadingDiv.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>';
+                logContainer.appendChild(loadingDiv);
+            }
+        });
+    });
     
     // Función para establecer la fecha máxima (actual)
     function setMaxDateToday() {
@@ -376,167 +542,86 @@ document.addEventListener('DOMContentLoaded', function() {
         advancedOptions.style.display = this.checked ? 'block' : 'none';
     });
 
-    // Reset functionality
-    resetButton.addEventListener('click', function() {
-        // Show all rows
-        const rows = logTable.querySelectorAll('tbody tr');
-        rows.forEach(row => {
-            row.classList.remove('hidden');
-            // Remove highlights
-            row.innerHTML = row.innerHTML.replace(/<mark>/g, '').replace(/<\/mark>/g, '');
-        });
-    });
-
-    // Search functionality
- // Código completo corregido para la función de búsqueda
-// Search functionality
-searchButton.addEventListener('click', function() {
-    // Reset previous search
-    const rows = logTable.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-        row.classList.remove('hidden');
-        row.innerHTML = row.innerHTML.replace(/<mark>/g, '').replace(/<\/mark>/g, '');
-    });
-
-    // Get search parameters
-    const basicSearchTerm = searchTerm.value.toLowerCase().trim();
-    const isAdvancedSearch = advancedSearchCheckbox.checked;
-
-    // Advanced search parameters
-    const startDate = isAdvancedSearch ? startDateInput.value : null;
-    const endDate = isAdvancedSearch ? endDateInput.value : null;
-    const term1 = isAdvancedSearch ? document.getElementById('term1').value.toLowerCase().trim() : null;
-    const term2 = isAdvancedSearch ? document.getElementById('term2').value.toLowerCase().trim() : null;
-    const logicOperator = isAdvancedSearch ? document.getElementById('logicOperator').value : null;
-
-    // Function to highlight search term in text
-    function highlightText(text, term) {
-        if (!term) return text;
-        const regex = new RegExp(`(${term})`, 'gi');
-        return text.replace(regex, '<mark>$1</mark>');
-    }
-
-    // Iterate through rows and apply filtering
-    rows.forEach(row => {
-        let shouldShow = true;
-        const cells = row.querySelectorAll('td:not(.checkbox-column)');
-        const cellTexts = Array.from(cells).map(cell => cell.textContent.toLowerCase());
+    // Función para actualizar el contador de filas visibles
+    function updateVisibleRowsCount() {
+        // Verificar si la tabla existe
+        if (!logTable) {
+            return;
+        }
         
-        // Basic search
-        if (basicSearchTerm) {
-            const basicMatch = cellTexts.some(text => text.includes(basicSearchTerm));
-            shouldShow = shouldShow && basicMatch;
-        }
-
-        // Advanced search options
-        if (isAdvancedSearch) {
-            // Guardar el estado original antes de aplicar filtros avanzados
-            // Solo para cuando la búsqueda básica está vacía
-            const originalShouldShow = shouldShow;
-            let advancedFilterApplied = false;
-            
-            // Date range filtering
-            if (startDate || endDate) {
-                advancedFilterApplied = true;
-                // Obtener la celda con la fecha (primera columna después del checkbox)
-                const dateCell = row.querySelector('td:nth-child(2)');
-                if (dateCell) {
-                    // Convertir el texto de fecha a un objeto Date
-                    const dateText = dateCell.textContent.trim();
-                    // Intentar parsearlo como fecha
-                    const rowDate = new Date(dateText);
-                    
-                    // Solo aplicar filtros si la fecha es válida
-                    if (!isNaN(rowDate.getTime())) {
-                        // Aplicar filtro de fecha inicial
-                        if (startDate && new Date(startDate) > rowDate) {
-                            shouldShow = false;
-                        }
-                        
-                        // Aplicar filtro de fecha final
-                        if (endDate && new Date(endDate) < rowDate) {
-                            shouldShow = false;
-                        }
-                    }
-                }
-            }
-
-            // Logical operators (AND/OR) with term matching
-            if (term1 || term2) {
-                advancedFilterApplied = true;
-                let term1Match = false;
-                let term2Match = false;
-                
-                // Comprobar si alguna celda contiene term1
-                if (term1) {
-                    term1Match = cellTexts.some(text => text.includes(term1));
-                }
-                
-                // Comprobar si alguna celda contiene term2
-                if (term2) {
-                    term2Match = cellTexts.some(text => text.includes(term2));
-                }
-                
-                // Aplicar lógica según el operador seleccionado
-                if (logicOperator === 'AND') {
-                    // Para AND, ambos términos deben estar presentes si se proporcionaron
-                    if (term1 && term2) {
-                        shouldShow = shouldShow && term1Match && term2Match;
-                    } else if (term1) {
-                        shouldShow = shouldShow && term1Match;
-                    } else if (term2) {
-                        shouldShow = shouldShow && term2Match;
-                    }
-                } else if (logicOperator === 'OR') {
-                    // Para OR, al menos un término debe estar presente si se proporcionaron
-                    if (term1 && term2) {
-                        shouldShow = shouldShow && (term1Match || term2Match);
-                    } else if (term1) {
-                        shouldShow = shouldShow && term1Match;
-                    } else if (term2) {
-                        shouldShow = shouldShow && term2Match;
-                    }
-                }
-            }
-            
-            // Si no hay filtros básicos y ningún filtro avanzado se aplicó, mostrar todas las filas
-            if (!basicSearchTerm && !advancedFilterApplied) {
-                shouldShow = true;
+        const rows = logTable.querySelectorAll('tbody tr');
+        const visibleRows = logTable.querySelectorAll('tbody tr:not(.hidden)');
+        const totalRows = rows.length;
+        const visibleCount = visibleRows.length;
+        
+        // Actualizar el contador de registros
+        const countElement = document.getElementById('visible-count');
+        if (countElement) {
+            if (totalRows === 0) {
+                countElement.textContent = `No hay registros para mostrar`;
+            } else if (visibleCount < totalRows) {
+                countElement.textContent = `Mostrando ${visibleCount} de ${totalRows} registros`;
+            } else {
+                countElement.textContent = `${totalRows} registros en total`;
             }
         }
+    }
+    
+    // El botón de reset ahora simplemente redirige a la vista de logs sin filtros
+    // La funcionalidad se maneja a través del enlace Limpiar en el formulario
 
-        // Apply filtering
-        if (shouldShow) {
-            row.classList.remove('hidden');
+    // La función de búsqueda ahora se maneja en el servidor
+    // El botón de búsqueda ahora envía el formulario directamente al servidor
+    // El resaltado de términos de búsqueda se puede implementar aquí si se desea
+    function highlightSearchTerms() {
+        const searchTerm = "{{ search_term|default('') }}";
+        const term1 = "{{ search_params.term1|default('') }}";
+        const term2 = "{{ search_params.term2|default('') }}";
+        
+        if (searchTerm || term1 || term2) {
+            const rows = logTable.querySelectorAll('tbody tr');
             
-            // Highlight basic search term
-            if (basicSearchTerm) {
-                cells.forEach(cell => {
-                    cell.innerHTML = highlightText(cell.textContent, basicSearchTerm);
-                });
-            }
-            
-            // Highlight advanced search terms
-            if (isAdvancedSearch) {
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td:not(.checkbox-column)');
+                
+                // Function to highlight search term in text
+                function highlightText(text, term) {
+                    if (!term) return text;
+                    try {
+                        const regex = new RegExp(`(${term})`, 'gi');
+                        return text.replace(regex, '<mark>$1</mark>');
+                    } catch (e) {
+                        // En caso de términos que puedan causar problemas en la regex
+                        return text;
+                    }
+                }
+                
+                // Highlight each term
+                if (searchTerm) {
+                    cells.forEach(cell => {
+                        cell.innerHTML = highlightText(cell.textContent, searchTerm);
+                    });
+                }
+                
                 if (term1) {
                     cells.forEach(cell => {
                         cell.innerHTML = highlightText(cell.innerHTML, term1);
                     });
                 }
+                
                 if (term2) {
                     cells.forEach(cell => {
                         cell.innerHTML = highlightText(cell.innerHTML, term2);
                     });
                 }
-            }
-        } else {
-            row.classList.add('hidden');
+            });
         }
-    });
+    }
     
-    // Re-inicializar la funcionalidad de checkboxes después de la búsqueda
-    initCheckboxFunctionality();
-});
+    // Aplicar resaltado si hay términos de búsqueda
+    if (logTable) {
+        highlightSearchTerms();
+    }
 
     // Usar delegación de eventos para los checkboxes
     function updateCopyButtonState() {
